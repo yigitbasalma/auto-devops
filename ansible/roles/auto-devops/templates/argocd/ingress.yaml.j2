@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+  name: {{ item.identifier }}
+spec:
+  {% if item.deploy.ingress.tls %}
+  tls:
+    - hosts:
+        {% for ing in item.deploy.ingress.hosts %}
+        - {{ ing.host }}
+        {% endfor %}
+      secretName: {{ item.deploy.ingress.tlsSecretName }}
+  {% endif %}
+  rules:
+  {% for ing in item.deploy.ingress.hosts %}
+  - host: {{ ing.host }}
+    http:
+      paths:
+      {% for path in ing.paths %}
+      - path: {{ path.name }}
+        pathType: {{ path.type }}
+        backend:
+          service:
+            name: {{ ing.service | default(item.identifier) }}
+            port:
+              number: {{ path.port }}
+      {% endfor %}
+  {% endfor %}

@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ item.identifier }}
+  name: {{ item.identifier }}
+spec:
+  replicas: {{ item.deploy.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ item.identifier }}
+  template:
+    metadata:
+      labels:
+        app: {{ item.identifier }}
+    spec:
+      {% if 'volumes' in item.deploy and item.deploy.volumes %}
+      volumes:
+        {{ item.deploy.volumes | to_nice_yaml | indent(8, False) }}
+      {% endif %}
+      {% if 'initContainers' in item.deploy and item.deploy.initContainers %}
+      initContainers:
+        {% for initContainer in item.deploy.initContainers %}
+        - name: {{ initContainer.name | replace(" ", "-") | lower }}
+          image: {{ initContainer.image | replace("$ImageID", image_id) }}
+          command:
+            {{ initContainer.command | to_nice_yaml | indent(12, False) }}
+          {% if initContainer.envFrom %}
+          envFrom:
+            {{ initContainer.envFrom | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          {% if 'volumes' in item.deploy and item.deploy.volumes and initContainer.volumeMounts %}
+          volumeMounts:
+            {{ initContainer.volumeMounts | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      containers:
+        - image: registry.tr.zip.co/{{ item.identifier }}:{{ image_id }}
+          name: {{ item.identifier }}
+          {% if 'command' in item.deploy and item.deploy.command %}
+          command:
+            {{ item.deploy.command | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          {% if 'securityContext' in item.deploy and item.deploy.securityContext %}
+          securityContext:
+            {{ item.deploy.securityContext | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          {% if 'volumes' in item.deploy and item.deploy.volumes and item.deploy.volumeMounts %}
+          volumeMounts:
+            {{ item.deploy.volumeMounts | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          ports:
+          {% for port in item.deploy.ports %}
+          - containerPort: {{ port.port }}
+            protocol: {{ port.type }}
+            name: "{{ port.type | lower }}-{{ port.port }}"
+          {% endfor %}
+          env:
+            - name: ENVIRONMENT
+              value: {{ item.environment }}
+            - name: spring_profiles_active
+              value: {{ item.environment }}
+            {% if item.deploy.env %}
+            {{ item.deploy.env | to_nice_yaml | indent(12, False) }}
+            {% endif %}
+          {% if item.deploy.envFrom %}
+          envFrom:
+            {{ item.deploy.envFrom | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          readinessProbe:
+            {% if item.deploy.healthcheck.type == "http" %}
+            httpGet:
+              path: {{ item.deploy.healthcheck.path }}
+              port: {{ item.deploy.healthcheck.port | default(item.deploy.container_port) }}
+            {% else %}
+            tcpSocket:
+              port: {{ item.deploy.healthcheck.port | default(item.deploy.container_port) }}
+            {% endif %}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: {{ item.deploy.healthcheck.timeout }}
+          livenessProbe:
+            {% if item.deploy.healthcheck.type == "http" %}
+            httpGet:
+              path: {{ item.deploy.healthcheck.path }}
+              port: {{ item.deploy.healthcheck.port | default(item.deploy.container_port) }}
+            {% else %}
+            tcpSocket:
+              port: {{ item.deploy.healthcheck.port | default(item.deploy.container_port) }}
+            {% endif %}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: {{ item.deploy.healthcheck.timeout }}
+          resources:
+            requests:
+              memory: {{ item.deploy.resource.memory }}
+              cpu: {{ item.deploy.resource.cpu }}
+            limits:
+              memory: {{ item.deploy.resource.memory }}
+              cpu: {{ item.deploy.resource.cpu }}
+        {% if 'sideCars' in item.deploy and item.deploy.sideCars %}
+        {% for sideCar in item.deploy.sideCars %}
+        - image: {{ sideCar.image | replace('$ImageID', image_id) }}
+          name: {{ sideCar.name }}
+          {% if 'command' in sideCar and sideCar.command %}
+          command:
+            {{ sideCar.command | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          {% if 'securityContext' in sideCar and sideCar.securityContext %}
+          securityContext:
+            {{ sideCar.securityContext | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          {% if 'volumes' in item.deploy and item.deploy.volumes and sideCar.volumeMounts %}
+          volumeMounts:
+            {{ sideCar.volumeMounts | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          ports:
+          {% for port in sideCar.ports %}
+          - containerPort: {{ port.port }}
+            protocol: {{ port.type }}
+            name: "{{ port.type | lower }}-{{ port.port }}"
+          {% endfor %}
+          {% if sideCar.envFrom %}
+          envFrom:
+            {{ sideCar.envFrom | to_nice_yaml | indent(12, False) }}
+          {% endif %}
+          readinessProbe:
+            {% if sideCar.healthcheck.type == "http" %}
+            httpGet:
+              path: {{ sideCar.healthcheck.path }}
+              port: {{ sideCar.healthcheck.port }}
+            {% else %}
+            tcpSocket:
+              port: {{ sideCar.healthcheck.port }}
+            {% endif %}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: {{ sideCar.healthcheck.timeout }}
+          livenessProbe:
+            {% if sideCar.healthcheck.type == "http" %}
+            httpGet:
+              path: {{ sideCar.healthcheck.path }}
+              port: {{ sideCar.healthcheck.port }}
+            {% else %}
+            tcpSocket:
+              port: {{ sideCar.healthcheck.port }}
+            {% endif %}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: {{ sideCar.healthcheck.timeout }}
+        {% endfor %}
+        {% endif %}

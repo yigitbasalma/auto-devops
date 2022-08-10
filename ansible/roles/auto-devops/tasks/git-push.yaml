@@ -1,0 +1,19 @@
+---
+  - name: Push Jenkinsfiles to repository
+    shell: |
+      cd /opt/auto-devops/jenkinsfiles &&
+        git add . &&
+        git commit -m "New projects added." &&
+        git push origin
+    register: command_result
+    failed_when: "'failed' in command_result.stderr"
+
+  - name: Push ArgoCD to repository
+    shell: |
+      cd /opt/auto-devops/argocd &&
+        git add . &&
+        git commit -m "New projects added." &&
+        git push origin
+    when: argocd_base_repo is defined
+    register: command_result
+    failed_when: "'failed' in command_result.stderr"

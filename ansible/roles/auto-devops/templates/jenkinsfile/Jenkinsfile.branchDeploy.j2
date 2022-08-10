@@ -1,0 +1,15 @@
+@Library("{{ item.language }}") _
+
+core_branchDeployer(
+    {% if item.scm_security | default(false) %}
+
+    scm_security: true,
+    scm_credentials_id: "{{ item.scm_credentials_id }}",
+    {% endif %}
+
+    scope: "branch",
+    application_type: "{{ item.language }}",
+    scm_address: "{{ item.repo }}",
+    target_branch: "{{ item.branch | default('master') }}",
+    environment: "{{ ENVIRONMENT }}"
+)

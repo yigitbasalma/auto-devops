@@ -1,0 +1,13 @@
+---
+  - name: Install required libraries
+    pip:
+      name: python-jenkins
+
+  - name: Include tasks
+    include_tasks: "{{ item }}"
+    loop:
+      - ../tasks/git-clone.yaml
+      - ../tasks/jenkinsfiles.yaml
+      - ../tasks/argocd.yaml
+      - ../tasks/git-push.yaml
+      - ../tasks/jenkins-jobs.yaml

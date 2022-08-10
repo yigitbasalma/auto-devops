@@ -1,0 +1,13 @@
+---
+  - name: Clone Jenkinsfile repo from SCM
+    ansible.builtin.git:
+      repo: "{{ jenkinsfile_base_repo }}"
+      dest: /opt/auto-devops/jenkinsfiles
+      ssh_opts: "-o StrictHostKeyChecking=no"
+
+  - name: Clone ArgoCD repo from SCM if exists
+    ansible.builtin.git:
+      repo: "{{ argocd_base_repo }}"
+      dest: /opt/auto-devops/argocd
+      ssh_opts: "-o StrictHostKeyChecking=no"
+    when: argocd_base_repo is defined

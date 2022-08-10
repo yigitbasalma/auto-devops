@@ -1,0 +1,36 @@
+---
+  - name: Create project folder on Jenkinsfile repo
+    ansible.builtin.file:
+      path: "/opt/auto-devops/jenkinsfiles/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}"
+      state: directory
+    with_items: "{{ auto_devops_projects }}"
+
+  - name: Create build Jenkinsfile for projects
+    ansible.builtin.template:
+      src: ../templates/jenkinsfile/Jenkinsfile.build.j2
+      dest: "/opt/auto-devops/jenkinsfiles/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}/Jenkinsfile.build"
+    with_items: "{{ auto_devops_projects }}"
+    when:
+      - ENVIRONMENT == 'test'
+
+  - name: Create branch build Jenkinsfile for projects
+    ansible.builtin.template:
+      src: ../templates/jenkinsfile/Jenkinsfile.branchBuild.j2
+      dest: "/opt/auto-devops/jenkinsfiles/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}/Jenkinsfile.branchBuild"
+    with_items: "{{ auto_devops_projects }}"
+    when:
+      - ENVIRONMENT == 'test'
+
+  - name: Create branch deploy Jenkinsfile for projects
+    ansible.builtin.template:
+      src: ../templates/jenkinsfile/Jenkinsfile.branchDeploy.j2
+      dest: "/opt/auto-devops/jenkinsfiles/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}/Jenkinsfile.branchDeploy"
+    with_items: "{{ auto_devops_projects }}"
+    when:
+      - ENVIRONMENT == 'test'
+
+  - name: Create deploy Jenkinsfile for projects
+    ansible.builtin.template:
+      src: ../templates/jenkinsfile/Jenkinsfile.deploy.j2
+      dest: "/opt/auto-devops/jenkinsfiles/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}/Jenkinsfile.deploy"
+    with_items: "{{ auto_devops_projects }}"

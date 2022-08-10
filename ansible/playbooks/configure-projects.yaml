@@ -1,0 +1,7 @@
+- name: Configure Auto-Devops
+  hosts: target
+  connection: local
+  vars_files:
+    - "../inventories/projects/vars/{{ PARENT }}.yaml"
+  roles:
+    - role: ../roles/auto-devops

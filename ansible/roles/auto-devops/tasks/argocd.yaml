@@ -1,0 +1,45 @@
+---
+  - name: Create project folder on ArgoCD repo
+    ansible.builtin.file:
+      path: "/opt/auto-devops/argocd/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}"
+      state: directory
+    with_items: "{{ auto_devops_projects }}"
+    when:
+      - argocd_base_repo is defined
+      - item.deploy is defined
+
+  - name: Create ArgoCD files
+    argocd:
+      app: "{{ item.deploy }}"
+      identifier: "{{ item.identifier }}"
+      base_path: "/opt/auto-devops/argocd/{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}"
+      environment: "{{ ENVIRONMENT }}"
+    with_items: "{{ auto_devops_projects }}"
+
+  - name: Create an ArgoCD application
+    kubernetes.core.k8s:
+      kubeconfig: "{{ KUBECONFIG }}"
+      state: present
+      definition:
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: "{{ item.name | lower | replace(' ', '-') }}-{{ ENVIRONMENT }}"
+          namespace: argocd
+          finalizers:
+            - resources-finalizer.argocd.argoproj.io
+          labels:
+            name: "{{ item.name | lower | replace(' ', '-') }}-{{ ENVIRONMENT }}"
+        spec:
+          project: default
+          source:
+            repoURL: "{{ argocd_base_repo }}"
+            targetRevision: HEAD
+            path: "{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}"
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: "{{ item.project | lower | replace(' ', '-') }}-{{ ENVIRONMENT }}"
+          syncPolicy:
+            syncOptions:
+              - CreateNamespace=true
+    with_items: "{{ auto_devops_projects }}"

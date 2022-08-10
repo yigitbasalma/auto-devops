@@ -1,0 +1,17 @@
+@Library("{{ item.language }}") _
+
+core_builder(
+    {% if item.scm_security | default(false) %}
+
+    scm_security: true,
+    scm_credentials_id: "{{ item.scm_credentials_id }}",
+    {% endif %}
+
+    scope: "global",
+    application_type: "{{ item.language }}",
+    container_repo: "{{ item.identifier }}",
+    scm_address: "{{ item.repo }}",
+    target_branch: "{{ item.branch | default('master') }}",
+    sonar_qube_project_key: "{{ item.identifier }}",
+    environment: "{{ ENVIRONMENT }}"
+)

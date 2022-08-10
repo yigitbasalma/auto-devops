@@ -1,0 +1,13 @@
+---
+  - name: Create job on Jenkins
+    jenkins:
+      url: "{{ jenkins_url }}"
+      username: admin
+      password: "{{ JENKINS_PASSWORD | default() }}"
+      jenkinsfile_repo: "{{ jenkinsfile_base_repo }}"
+      jenkinsfile_location: "{{ item.project | replace(' ', '_') | lower }}/{{ item.identifier }}/{{ ENVIRONMENT }}"
+      jenkins_security: "{{ jenkins_security }}"
+      app_name: "{{ item.name }}"
+      project: "{{ item.project }}"
+      environment: "{{ ENVIRONMENT }}"
+    with_items: "{{ auto_devops_projects }}"

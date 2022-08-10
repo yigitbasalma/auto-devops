@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ item.identifier }}
+  labels:
+    apps: {{ item.identifier }}
+spec:
+  type: ClusterIP
+  ports:
+    {% for port in item.deploy.ports %}
+    - port: {{ port.port }}
+      targetPort: {{ port.port }}
+      name: "{{ port.type | lower }}-{{ port.port }}"
+    {% endfor %}
+  selector:
+    app: {{ item.identifier }}

@@ -1,0 +1,128 @@
+argocd_base_repo: git@github:devops/argocd.git
+jenkinsfile_base_repo: git@github:devops/jenkinsfiles.git
+
+jenkins_url: https://jenkins.local
+jenkins_security: true
+
+auto_devops_projects:
+  - name: Super App Frontend
+    project: Super Project
+    identifier: super_app_frontend
+    language: nodejs
+    repo: git@github.com:yigitbasalma/voting-app-results.git
+    branch: devops
+    scm_security: true
+    scm_credentials_id: github-ssh
+    deploy:
+      env:
+        - name: PORT
+          value: 8080
+      envFrom: []
+      replicas: 1
+      ports:
+        - port: 8080
+          type: TCP
+      ingress:
+        tls: false
+        tlsSecretName: tls-super-app
+        hosts:
+          - host: superapp.super
+            paths:
+              - name: /
+                type: Prefix
+                port: 8080
+      healthcheck:
+        path: /
+        timeout: 5
+        type: http
+        port: 8080
+      resource:
+        memory: 1024Mi
+        cpu: "200m"
+  - name: Super App Backend
+    project: Super Project
+    identifier: super_app_backend
+    language: python
+    repo: git@github.com:yigitbasalma/voting-app.git
+    branch: master
+    scm_security: true
+    scm_credentials_id: github-ssh
+    deploy:
+      components:
+        test:
+          - postgresql
+          - redis
+      sideCars:
+        - name: dd-trace-agent
+          image: gcr.io/datadoghq/agent:latest
+          command:
+            - trace-agent
+          port:
+            - port: 8126
+              type: TCP
+          env:
+            - name: DD_API_KEY
+              value: <dynatrace>
+          healthcheck:
+            timeout: 5
+            type: tcp
+            port: 8126
+      initContainers:
+        - name: Database Migration
+          image: registry.local/super-app-backend:$ImageID
+          envFrom:
+            - configMapRef:
+                name: backend-env
+          volumeMounts:
+            - name: settings
+              mountPath: /app/settings/mnt
+          command:
+            - python3
+            - manage.py
+            - migrate
+      env: []
+      volumes:
+        - name: cache-volume
+          emptyDir: {}
+        - name: uwsgi-socket
+          emptyDir: {}
+        - name: settings
+          configMap:
+            name: django-settings
+            defaultMode: 420
+      volumeMounts:
+        - name: cache-volume
+          mountPath: /var/emails
+        - name: uwsgi-socket
+          mountPath: /var/www/socket
+        - name: settings
+          mountPath: /app/settings/mnt
+      securityContext:
+        runAsUser: 33
+        runAsGroup: 33
+        runAsNonRoot: true
+      command:
+        - uwsgi
+        - '--ini'
+        - uwsgi.ini
+        - '--workers'
+        - '4'
+        - '--hook-master-start'
+        - 'unix_signal:15 gracefully_kill_them_all'
+      envFrom:
+        - configMapRef:
+            name: backend-env
+        - secretRef:
+            name: credentials-secrets
+      replicas: 1
+      ports:
+        - port: 80
+          type: TCP
+      healthcheck:
+        path: /
+        timeout: 5
+        type: http
+        port: 80
+      resource:
+        memory: 1Gi
+        cpu: "1"
